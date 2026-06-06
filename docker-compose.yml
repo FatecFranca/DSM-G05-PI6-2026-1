@@ -1,0 +1,74 @@
+version: "3.9"
+
+# ============================================================
+# docker-compose para Backend (NestJS) + Frontend (Next.js)
+#
+# Pré-requisitos na VM:
+#   - PostgreSQL rodando em 201.54.22.62:5432
+#   - Python API rodando em 201.54.22.62:8000
+#
+# Uso:
+#   docker compose up -d --build
+# ============================================================
+
+services:
+
+  # ── Backend NestJS ────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: commodities_backend
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      NODE_ENV: production
+      PORT: 9000
+      # Auth
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-30m}
+      # Banco de dados (já na VM)
+      DATABASE_URL: ${DATABASE_URL}
+      # API Python (já na VM)
+      EXTERNAL_API_URL: ${EXTERNAL_API_URL:-http://201.54.22.62:8000}
+      # Gemini
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      # SMTP
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM}
+      # Telegram (opcional)
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/api/v1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Frontend Next.js ──────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # NEXT_PUBLIC_* é embutido no bundle em build-time
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://201.54.22.62:9000/api/v1}
+    container_name: commodities_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

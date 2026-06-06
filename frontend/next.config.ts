@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Gera .next/standalone para Dockerfile enxuto (sem node_modules na imagem final)
+  output: "standalone",
 };
 
 export default nextConfig;
