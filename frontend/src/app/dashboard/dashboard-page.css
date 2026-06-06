@@ -1,0 +1,75 @@
+.commodity-card {
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.commodity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.commodity-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.commodity-price-info {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.commodity-price-info .price {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.commodity-price-info .unit {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.commodity-forecast {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.forecast-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.forecast-value {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.forecast-value.up {
+  color: var(--status-bad); /* For a buyer, price going up is BAD unless they need to decide... wait */
+  /* PRD: "bom: previsao indica alta futura relevante, sugerindo que comprar agora tende a ser vantajoso" 
+     Wait! The PRD says if it's going up, it's GOOD to buy NOW to avoid paying more later!
+     So up forecast should map to the status "good". We'll use color var for 'up' trend specifically, distinct from status. Let's use standard up/down colors.
+  */
+  color: var(--status-bad); /* Price is rising (red for price) */
+}
+
+.forecast-value.down {
+  color: var(--status-good); /* Price is dropping (green for price) */
+}
+
+/* Let's redefine up/down purely logically */
+/* If the price rises, it means the buyer will pay more in the future. So "Good" means buy now before it goes up. */
+/* I will just use text colors */

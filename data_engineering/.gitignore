@@ -1,0 +1,45 @@
+# Environment
+.env
+venv/
+.venv/
+
+# Python
+__pycache__/
+__init__.py
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Artifacts (gerados pelo treino)
+artifacts/
+
+# Dados processados (gerados pelos notebooks/pipeline)
+data/processed/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+
+# Testes
+.pytest_cache

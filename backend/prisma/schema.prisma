@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model alerta {
+  id_alerta                           Int           @id @default(autoincrement())
+  id_usuario                          Int
+  id_materia_prima                    Int
+  tipo_alerta                         String        @db.VarChar(50)
+  valor_limite_opcional               Decimal?      @db.Decimal(12, 2)
+  variacao_percentual_limite_opcional Decimal?      @db.Decimal(8, 4)
+  ativo                               Boolean?      @default(true)
+  criado_em                           DateTime?     @default(now()) @db.Timestamp(6)
+  atualizado_em                       DateTime?     @default(now()) @db.Timestamp(6)
+  materia_prima                       materia_prima @relation(fields: [id_materia_prima], references: [id_materia_prima], onDelete: NoAction, onUpdate: NoAction)
+  usuario                             usuario       @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+  notificacao                         notificacao[]
+
+  @@index([id_usuario], map: "idx_alerta_usuario")
+}
+
+model compra {
+  id_compra            Int           @id @default(autoincrement())
+  id_usuario           Int
+  id_materia_prima     Int
+  data_compra          DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
+  quantidade           Decimal       @db.Decimal(12, 4)
+  preco_unitario_pago  Decimal       @db.Decimal(12, 2)
+  valor_total          Decimal       @db.Decimal(12, 2)
+  fornecedor_opcional  String?       @db.VarChar(255)
+  observacoes_opcional String?
+  preco_referencia     Decimal?      @db.Decimal(12, 2)
+  economia_estimada    Decimal?      @db.Decimal(12, 2)
+  criado_em            DateTime?     @default(now()) @db.Timestamp(6)
+  atualizado_em        DateTime?     @default(now()) @db.Timestamp(6)
+  materia_prima        materia_prima @relation(fields: [id_materia_prima], references: [id_materia_prima], onDelete: NoAction, onUpdate: NoAction)
+  usuario              usuario       @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_materia_prima], map: "idx_compra_materia")
+  @@index([id_usuario], map: "idx_compra_usuario")
+}
+
+model historico_preco {
+  id_historico_preco Int           @id @default(autoincrement())
+  id_materia_prima   Int
+  data_referencia    DateTime      @db.Date
+  preco_medio        Decimal       @db.Decimal(12, 2)
+  fonte_dado         String?       @default("CONAB") @db.VarChar(100)
+  regiao_opcional    String?       @db.VarChar(100)
+  criado_em          DateTime?     @default(now()) @db.Timestamp(6)
+  materia_prima      materia_prima @relation(fields: [id_materia_prima], references: [id_materia_prima], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([data_referencia], map: "idx_historico_preco_data")
+  @@index([id_materia_prima], map: "idx_historico_preco_materia")
+}
+
+model materia_prima {
+  id_materia_prima    Int                   @id @default(autoincrement())
+  nome                String                @db.VarChar(255)
+  categoria           String?               @db.VarChar(100)
+  unidade_medida      String                @default("kg") @db.VarChar(20)
+  ativo               Boolean?              @default(true)
+  criado_em           DateTime?             @default(now()) @db.Timestamp(6)
+  alerta              alerta[]
+  compra              compra[]
+  historico_preco     historico_preco[]
+  previsao_preco      previsao_preco[]
+  recomendacao_compra recomendacao_compra[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model notificacao {
+  id_notificacao      Int       @id @default(autoincrement())
+  id_alerta           Int
+  id_usuario          Int
+  canal_envio         String    @default("email") @db.VarChar(50)
+  titulo              String    @db.VarChar(255)
+  mensagem            String
+  status_envio        String    @default("pendente") @db.VarChar(20)
+  enviado_em          DateTime? @db.Timestamp(6)
+  erro_envio_opcional String?
+  criado_em           DateTime? @default(now()) @db.Timestamp(6)
+  alerta              alerta    @relation(fields: [id_alerta], references: [id_alerta], onDelete: NoAction, onUpdate: NoAction)
+  usuario             usuario   @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_alerta], map: "idx_notificacao_alerta")
+}
+
+model previsao_preco {
+  id_previsao_preco            Int           @id @default(autoincrement())
+  id_materia_prima             Int
+  data_geracao                 DateTime?     @default(now()) @db.Timestamp(6)
+  periodo_previsto             String        @db.VarChar(20)
+  preco_previsto               Decimal       @db.Decimal(12, 2)
+  variacao_percentual_prevista Decimal?      @db.Decimal(8, 4)
+  modelo_utilizado             String?       @default("XGBRegressor") @db.VarChar(100)
+  versao_modelo                String?       @default("1.0.0") @db.VarChar(20)
+  criado_em                    DateTime?     @default(now()) @db.Timestamp(6)
+  materia_prima                materia_prima @relation(fields: [id_materia_prima], references: [id_materia_prima], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_materia_prima], map: "idx_previsao_materia")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model recomendacao_compra {
+  id_recomendacao_compra Int           @id @default(autoincrement())
+  id_materia_prima       Int
+  data_calculo           DateTime?     @default(now()) @db.Timestamp(6)
+  preco_atual_referencia Decimal       @db.Decimal(12, 2)
+  previsao_media_futura  Decimal       @db.Decimal(12, 2)
+  variacao_percentual    Decimal?      @db.Decimal(8, 4)
+  classificacao_compra   String        @db.VarChar(10)
+  justificativa_resumida String?
+  criado_em              DateTime?     @default(now()) @db.Timestamp(6)
+  materia_prima          materia_prima @relation(fields: [id_materia_prima], references: [id_materia_prima], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model usuario {
+  id_usuario                  Int           @id @default(autoincrement())
+  nome                        String        @db.VarChar(255)
+  email                       String        @unique @db.VarChar(255)
+  senha_hash                  String        @db.VarChar(255)
+  telefone_opcional           String?       @db.VarChar(20)
+  canal_notificacao_preferido String?       @default("email") @db.VarChar(50)
+  criado_em                   DateTime?     @default(now()) @db.Timestamp(6)
+  atualizado_em               DateTime?     @default(now()) @db.Timestamp(6)
+  alerta                      alerta[]
+  compra                      compra[]
+  notificacao                 notificacao[]
+}
