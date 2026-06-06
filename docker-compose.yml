@@ -13,6 +13,19 @@ version: "3.9"
 
 services:
 
+  # ── Redis (exigido pelo BullMQ no NestJS) ────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: commodities_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ── Backend NestJS ────────────────────────────────────────
   backend:
     build:
@@ -22,9 +35,15 @@ services:
     restart: unless-stopped
     ports:
       - "9000:9000"
+    depends_on:
+      redis:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 9000
+      # Redis (BullMQ)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       # Auth
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-30m}
@@ -43,11 +62,12 @@ services:
       # Telegram (opcional)
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/api/v1 || exit 1"]
-      interval: 30s
+      # GET /api/v1/ → AppController retorna 200 "Hello World!"
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/ 2>&1 | grep -q . || exit 1"]
+      interval: 15s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 30s
 
   # ── Frontend Next.js ──────────────────────────────────────
   frontend:
@@ -55,7 +75,6 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # NEXT_PUBLIC_* é embutido no bundle em build-time
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://201.54.22.62:9000/api/v1}
     container_name: commodities_frontend
     restart: unless-stopped
@@ -67,8 +86,8 @@ services:
     environment:
       NODE_ENV: production
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000 || exit 1"]
-      interval: 30s
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000 2>&1 | grep -q . || exit 1"]
+      interval: 20s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      start_period: 30s
