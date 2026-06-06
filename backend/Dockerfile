@@ -9,7 +9,12 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-# Copia código-fonte e compila
+# Copia schema do Prisma e gera o client ANTES do build
+# (os tipos de @prisma/client precisam existir para o TypeScript compilar)
+COPY prisma ./prisma
+RUN npx prisma generate
+
+# Copia o restante do código-fonte e compila
 COPY . .
 RUN npm run build
 
@@ -26,12 +31,12 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Artefatos compilados do builder
-COPY --from=builder /app/dist ./dist
-
-# Schema Prisma (necessário para o client em runtime)
+# Schema Prisma + gerar client na imagem final
 COPY prisma ./prisma
 RUN npx prisma generate
+
+# Artefatos compilados do builder
+COPY --from=builder /app/dist ./dist
 
 EXPOSE 9000
 
