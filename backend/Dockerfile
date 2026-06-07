@@ -1,7 +1,7 @@
 # ============================================================
 # Stage 1: Builder — instala dependências e compila TypeScript
 # ============================================================
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
@@ -21,15 +21,21 @@ RUN npm run build
 # ============================================================
 # Stage 2: Runtime — imagem final enxuta
 # ============================================================
-FROM node:20-alpine AS runtime
+FROM node:20-slim AS runtime
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Dependências de sistema para o Prisma (OpenSSL)
+RUN apt-get update -y && apt-get install -y openssl wget --no-install-recommends && rm -rf /var/lib/apt/lists/*
+
 # Apenas dependências de produção
 COPY package*.json ./
 RUN npm ci --omit=dev
+
+# Copia o arquivo .env (e .env.example) se existirem
+COPY .env* ./
 
 # Schema Prisma + gerar client na imagem final
 COPY prisma ./prisma
@@ -37,6 +43,9 @@ RUN npx prisma generate
 
 # Artefatos compilados do builder
 COPY --from=builder /app/dist ./dist
+
+# Arquivo SKILL.md lido em runtime pelo AssistentService
+COPY --from=builder /app/src/assistent/SKILL.md ./src/assistent/SKILL.md
 
 EXPOSE 9000
 
